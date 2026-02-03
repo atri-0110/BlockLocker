@@ -1,8 +1,10 @@
 package org.allaymc.blocklocker.listener;
 
 import org.allaymc.api.entity.interfaces.EntityPlayer;
+import org.allaymc.api.eventbus.EventHandler;
 import org.allaymc.api.eventbus.event.block.BlockBreakEvent;
 import org.allaymc.api.eventbus.event.player.PlayerInteractBlockEvent;
+import org.allaymc.api.permission.Tristate;
 import org.allaymc.api.world.Dimension;
 import org.allaymc.blocklocker.data.ProtectedBlock;
 import org.allaymc.blocklocker.manager.ProtectionManager;
@@ -24,8 +26,14 @@ public class BlockListener {
     /**
      * Handle block interactions (right-clicking).
      */
+    @EventHandler
     public void onPlayerInteractBlock(PlayerInteractBlockEvent event) {
         EntityPlayer player = event.getPlayer();
+
+        // Check for bypass permission
+        if (player.hasPermission("blocklocker.bypass") == Tristate.TRUE) {
+            return;
+        }
 
         // Get the location from the player (current dimension)
         Dimension dimension = player.getDimension();
@@ -33,6 +41,7 @@ public class BlockListener {
         var pos = interactInfo.clickedBlockPos();
 
         String worldName = player.getWorld().getWorldData().getDisplayName();
+        int dimensionId = dimension.getDimensionInfo().dimensionId();
         int x = pos.x();
         int y = pos.y();
         int z = pos.z();
@@ -40,26 +49,26 @@ public class BlockListener {
         // Check if player is in lock mode
         if (protectionManager.isInLockMode(player.getUniqueId())) {
             event.setCancelled(true);
-            handleLockMode(player, dimension, x, y, z);
+            handleLockMode(player, dimension, dimensionId, x, y, z);
             return;
         }
 
         // Check if player is in unlock mode
         if (protectionManager.isInUnlockMode(player.getUniqueId())) {
             event.setCancelled(true);
-            handleUnlockMode(player, worldName, x, y, z);
+            handleUnlockMode(player, worldName, dimensionId, x, y, z);
             return;
         }
 
         // Check if player is in trust mode
         if (protectionManager.isInTrustMode(player.getUniqueId())) {
             event.setCancelled(true);
-            handleTrustMode(player, worldName, x, y, z);
+            handleTrustMode(player, worldName, dimensionId, x, y, z);
             return;
         }
 
         // Check if block is protected
-        ProtectedBlock protection = protectionManager.getProtection(worldName, x, y, z);
+        ProtectedBlock protection = protectionManager.getProtection(worldName, dimensionId, x, y, z);
         if (protection != null) {
             // Allow owner and trusted players
             if (!protection.hasAccess(player.getUniqueId())) {
@@ -72,8 +81,14 @@ public class BlockListener {
     /**
      * Handle block breaks.
      */
+    @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         if (!(event.getEntity() instanceof EntityPlayer player)) {
+            return;
+        }
+
+        // Check for bypass permission
+        if (player.hasPermission("blocklocker.bypass") == Tristate.TRUE) {
             return;
         }
 
@@ -81,11 +96,12 @@ public class BlockListener {
         var pos = block.getPosition();
 
         String worldName = block.getDimension().getWorld().getWorldData().getDisplayName();
+        int dimensionId = block.getDimension().getDimensionInfo().dimensionId();
         int x = pos.x();
         int y = pos.y();
         int z = pos.z();
 
-        ProtectedBlock protection = protectionManager.getProtection(worldName, x, y, z);
+        ProtectedBlock protection = protectionManager.getProtection(worldName, dimensionId, x, y, z);
         if (protection != null) {
             // Only owner can break protected blocks
             if (!protection.isOwner(player.getUniqueId())) {
@@ -93,7 +109,7 @@ public class BlockListener {
                 player.sendMessage("§cYou cannot break a block locked by " + protection.getOwnerName());
             } else {
                 // Owner breaking their own block - remove protection
-                protectionManager.unprotectBlock(worldName, x, y, z);
+                protectionManager.unprotectBlock(worldName, dimensionId, x, y, z);
                 player.sendMessage("§aProtection removed from block.");
             }
         }
@@ -102,7 +118,7 @@ public class BlockListener {
     /**
      * Handle lock mode interaction.
      */
-    private void handleLockMode(EntityPlayer player, Dimension dimension, int x, int y, int z) {
+    private void handleLockMode(EntityPlayer player, Dimension dimension, int dimensionId, int x, int y, int z) {
         String blockId = dimension.getBlockState(x, y, z).getBlockType().getIdentifier().toString();
 
         if (!BlockUtils.isProtectableBlock(blockId)) {
@@ -114,7 +130,7 @@ public class BlockListener {
         String worldName = player.getWorld().getWorldData().getDisplayName();
 
         // Check if already protected
-        if (protectionManager.isProtected(worldName, x, y, z)) {
+        if (protectionManager.isProtected(worldName, dimensionId, x, y, z)) {
             player.sendMessage("§cThis block is already locked.");
             protectionManager.disableLockMode(player.getUniqueId());
             return;
@@ -126,7 +142,7 @@ public class BlockListener {
                 : player.getDisplayName();
 
         // Protect the block
-        protectionManager.protectBlock(worldName, x, y, z, player.getUniqueId(), playerName);
+        protectionManager.protectBlock(worldName, dimensionId, x, y, z, player.getUniqueId(), playerName);
         player.sendMessage("§aBlock locked successfully! Only you and trusted players can access it.");
 
         protectionManager.disableLockMode(player.getUniqueId());
@@ -135,8 +151,8 @@ public class BlockListener {
     /**
      * Handle unlock mode interaction.
      */
-    private void handleUnlockMode(EntityPlayer player, String worldName, int x, int y, int z) {
-        ProtectedBlock protection = protectionManager.getProtection(worldName, x, y, z);
+    private void handleUnlockMode(EntityPlayer player, String worldName, int dimensionId, int x, int y, int z) {
+        ProtectedBlock protection = protectionManager.getProtection(worldName, dimensionId, x, y, z);
 
         if (protection == null) {
             player.sendMessage("§cThis block is not locked.");
@@ -150,7 +166,7 @@ public class BlockListener {
             return;
         }
 
-        protectionManager.unprotectBlock(worldName, x, y, z);
+        protectionManager.unprotectBlock(worldName, dimensionId, x, y, z);
         player.sendMessage("§aBlock unlocked successfully!");
 
         protectionManager.disableUnlockMode(player.getUniqueId());
@@ -159,8 +175,8 @@ public class BlockListener {
     /**
      * Handle trust mode interaction.
      */
-    private void handleTrustMode(EntityPlayer player, String worldName, int x, int y, int z) {
-        ProtectedBlock protection = protectionManager.getProtection(worldName, x, y, z);
+    private void handleTrustMode(EntityPlayer player, String worldName, int dimensionId, int x, int y, int z) {
+        ProtectedBlock protection = protectionManager.getProtection(worldName, dimensionId, x, y, z);
 
         if (protection == null) {
             player.sendMessage("§cThis block is not locked.");
@@ -184,11 +200,11 @@ public class BlockListener {
         // Check if already trusted
         if (protection.isTrusted(targetUuid)) {
             // Untrust (remove)
-            protectionManager.removeTrustedPlayer(worldName, x, y, z, targetUuid);
+            protectionManager.removeTrustedPlayer(worldName, dimensionId, x, y, z, targetUuid);
             player.sendMessage("§aPlayer removed from trusted list.");
         } else {
             // Trust (add)
-            protectionManager.addTrustedPlayer(worldName, x, y, z, targetUuid);
+            protectionManager.addTrustedPlayer(worldName, dimensionId, x, y, z, targetUuid);
             player.sendMessage("§aPlayer added to trusted list.");
         }
 

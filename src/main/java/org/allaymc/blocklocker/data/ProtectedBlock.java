@@ -18,6 +18,7 @@ import java.util.UUID;
 public class ProtectedBlock {
 
     private String worldName;
+    private int dimensionId;
     private int x;
     private int y;
     private int z;
@@ -28,8 +29,9 @@ public class ProtectedBlock {
     private boolean allowRedstone;
     private boolean allowHoppers;
 
-    public ProtectedBlock(String worldName, int x, int y, int z, UUID ownerUuid, String ownerName) {
+    public ProtectedBlock(String worldName, int dimensionId, int x, int y, int z, UUID ownerUuid, String ownerName) {
         this.worldName = worldName;
+        this.dimensionId = dimensionId;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -45,7 +47,7 @@ public class ProtectedBlock {
      * Get the unique key for this block location.
      */
     public String getLocationKey() {
-        return worldName + ":" + x + ":" + y + ":" + z;
+        return worldName + ":" + dimensionId + ":" + x + ":" + y + ":" + z;
     }
 
     /**

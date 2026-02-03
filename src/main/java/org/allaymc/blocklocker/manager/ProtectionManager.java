@@ -101,8 +101,8 @@ public class ProtectionManager {
     /**
      * Protect a block at the given location.
      */
-    public void protectBlock(String worldName, int x, int y, int z, UUID ownerUuid, String ownerName) {
-        ProtectedBlock block = new ProtectedBlock(worldName, x, y, z, ownerUuid, ownerName);
+    public void protectBlock(String worldName, int dimensionId, int x, int y, int z, UUID ownerUuid, String ownerName) {
+        ProtectedBlock block = new ProtectedBlock(worldName, dimensionId, x, y, z, ownerUuid, ownerName);
         protectedBlocks.put(block.getLocationKey(), block);
         saveAll();
     }
@@ -110,8 +110,8 @@ public class ProtectionManager {
     /**
      * Remove protection from a block.
      */
-    public void unprotectBlock(String worldName, int x, int y, int z) {
-        String key = worldName + ":" + x + ":" + y + ":" + z;
+    public void unprotectBlock(String worldName, int dimensionId, int x, int y, int z) {
+        String key = worldName + ":" + dimensionId + ":" + x + ":" + y + ":" + z;
         protectedBlocks.remove(key);
         saveAll();
     }
@@ -119,23 +119,23 @@ public class ProtectionManager {
     /**
      * Get protection info for a block.
      */
-    public ProtectedBlock getProtection(String worldName, int x, int y, int z) {
-        String key = worldName + ":" + x + ":" + y + ":" + z;
+    public ProtectedBlock getProtection(String worldName, int dimensionId, int x, int y, int z) {
+        String key = worldName + ":" + dimensionId + ":" + x + ":" + y + ":" + z;
         return protectedBlocks.get(key);
     }
 
     /**
      * Check if a block is protected.
      */
-    public boolean isProtected(String worldName, int x, int y, int z) {
-        return getProtection(worldName, x, y, z) != null;
+    public boolean isProtected(String worldName, int dimensionId, int x, int y, int z) {
+        return getProtection(worldName, dimensionId, x, y, z) != null;
     }
 
     /**
      * Check if a player can access a protected block.
      */
-    public boolean canAccess(String worldName, int x, int y, int z, UUID playerUuid) {
-        ProtectedBlock block = getProtection(worldName, x, y, z);
+    public boolean canAccess(String worldName, int dimensionId, int x, int y, int z, UUID playerUuid) {
+        ProtectedBlock block = getProtection(worldName, dimensionId, x, y, z);
         if (block == null) {
             return true; // Not protected, anyone can access
         }
@@ -145,8 +145,8 @@ public class ProtectionManager {
     /**
      * Check if a player is the owner of a protected block.
      */
-    public boolean isOwner(String worldName, int x, int y, int z, UUID playerUuid) {
-        ProtectedBlock block = getProtection(worldName, x, y, z);
+    public boolean isOwner(String worldName, int dimensionId, int x, int y, int z, UUID playerUuid) {
+        ProtectedBlock block = getProtection(worldName, dimensionId, x, y, z);
         if (block == null) {
             return false;
         }
@@ -169,8 +169,8 @@ public class ProtectionManager {
     /**
      * Add a trusted player to a block.
      */
-    public void addTrustedPlayer(String worldName, int x, int y, int z, UUID trustedUuid) {
-        ProtectedBlock block = getProtection(worldName, x, y, z);
+    public void addTrustedPlayer(String worldName, int dimensionId, int x, int y, int z, UUID trustedUuid) {
+        ProtectedBlock block = getProtection(worldName, dimensionId, x, y, z);
         if (block != null) {
             block.addTrustedPlayer(trustedUuid);
             saveAll();
@@ -180,12 +180,21 @@ public class ProtectionManager {
     /**
      * Remove a trusted player from a block.
      */
-    public void removeTrustedPlayer(String worldName, int x, int y, int z, UUID trustedUuid) {
-        ProtectedBlock block = getProtection(worldName, x, y, z);
+    public void removeTrustedPlayer(String worldName, int dimensionId, int x, int y, int z, UUID trustedUuid) {
+        ProtectedBlock block = getProtection(worldName, dimensionId, x, y, z);
         if (block != null) {
             block.removeTrustedPlayer(trustedUuid);
             saveAll();
         }
+    }
+
+    /**
+     * Clean up mode settings for a player (called when they disconnect).
+     */
+    public void cleanupPlayer(UUID playerUuid) {
+        lockModePlayers.remove(playerUuid);
+        unlockModePlayers.remove(playerUuid);
+        trustModePlayers.remove(playerUuid);
     }
 
     // Lock mode management
