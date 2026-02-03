@@ -6,6 +6,7 @@ import org.allaymc.api.registry.Registries;
 import org.allaymc.api.server.Server;
 import org.allaymc.blocklocker.command.BlockLockerCommand;
 import org.allaymc.blocklocker.listener.BlockListener;
+import org.allaymc.blocklocker.listener.PlayerEventListener;
 import org.allaymc.blocklocker.manager.ProtectionManager;
 
 /**
@@ -39,6 +40,7 @@ public class BlockLockerPlugin extends Plugin {
 
         // Register event listeners
         Server.getInstance().getEventBus().registerListener(new BlockListener(protectionManager));
+        Server.getInstance().getEventBus().registerListener(new PlayerEventListener(this));
 
         this.pluginLogger.info("BlockLocker has been enabled! Players can now lock their blocks.");
     }
