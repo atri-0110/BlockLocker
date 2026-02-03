@@ -12,6 +12,10 @@ build/
 *.iws
 .vscode/
 
+# Build artifacts
+*.jar
+*.class
+
 # OS
 .DS_Store
 Thumbs.db
