@@ -1,0 +1,10 @@
+{
+    "entrance": "org.allaymc.blocklocker.BlockLockerPlugin",
+    "name": "BlockLocker",
+    "version": "0.1.0",
+    "authors": [
+        "atri-0110"
+    ],
+    "description": "A block protection and locking system for AllayMC servers",
+    "website": "https://github.com/atri-0110/BlockLocker"
+}
